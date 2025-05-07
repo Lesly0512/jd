@@ -1,115 +1,77 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <title>📄 職位畫像預覽與匯出</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <meta charset="UTF-8" />
+  <title>PDF 預覽與匯出</title>
   <style>
-    body { font-family: sans-serif; padding: 2rem; background: #f5f5f5; line-height: 1.6; }
-    #protected { display: none; }
-    .section-block { background: #fff; padding: 1rem; margin-bottom: 1.5rem; border-radius: 6px; border: 1px solid #ccc; }
+    body { font-family: "Noto Sans TC", sans-serif; padding: 2rem; line-height: 1.6; }
+    h1, h2, h3 { margin: 1rem 0 0.5rem; }
+    .section-block { margin-top: 2rem; }
     table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
-    th, td { border: 1px solid #ccc; padding: 0.5rem; }
-    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .topbar h2 { margin: 0; }
-    button { padding: 0.5rem 1rem; }
-    #authBox { text-align: center; margin-top: 10vh; }
-    #authBox input { padding: 0.5rem; width: 200px; margin-right: 1rem; }
+    td { border: 1px solid #ccc; padding: 0.5rem; }
+    .meta { margin-bottom: 1.5rem; color: #666; font-size: 0.9rem; }
+    .download-btn { margin-top: 1rem; padding: 0.4rem 0.8rem; }
   </style>
 </head>
 <body>
-<div id="authBox">
-  <h2>請輸入密碼以查看職位畫像</h2>
-  <input type="password" id="pdfPass" placeholder="密碼">
-  <button onclick="unlock()">登入</button>
-</div>
+  <h1 id="pdfTitle">職位畫像 PDF 預覽</h1>
+  <div class="meta" id="timestamp"></div>
 
-<div id="protected">
-  <div class="topbar">
-    <h2 id="pdfTitle">職位畫像</h2>
-    <div>
-      <span id="timestamp"></span>
-      <button onclick="downloadPDF()">📄 下載 PDF</button>
-    </div>
-  </div>
   <div id="pdfContent"></div>
-</div>
+
+  <button class="download-btn" onclick="window.print()">📄 下載 PDF</button>
 
 <script>
-  const correctPassword = "demo_admin";
+function renderPDFPage() {
+  const params = new URLSearchParams(window.location.search);
+  const index = parseInt(params.get("index"), 10);
+  const raw = localStorage.getItem("roles");
+  const roles = raw ? JSON.parse(raw) : [];
 
-  function unlock() {
-    const input = document.getElementById("pdfPass").value;
-    if (input === correctPassword) {
-      document.getElementById("authBox").style.display = "none";
-      document.getElementById("protected").style.display = "block";
-      renderPDFPage();
-    } else {
-      alert("密碼錯誤！");
-    }
+  if (isNaN(index) || !roles[index]) {
+    document.getElementById("pdfContent").innerHTML = "<p>查無職位資料。</p>";
+    return;
   }
 
-  function renderPDFPage() {
-    const params = new URLSearchParams(window.location.search);
-    const index = parseInt(params.get("index"), 10);
-    const raw = localStorage.getItem("roles");
-    const roles = raw ? JSON.parse(raw) : [];
+  const role = roles[index];
+  document.getElementById("pdfTitle").innerText = "職位畫像｜" + role.role;
+  document.getElementById("timestamp").innerText = "匯出日期：" + new Date().toLocaleString("zh-TW");
 
-    if (isNaN(index) || !roles[index]) {
-      document.getElementById("pdfContent").innerHTML = "<p>查無職位資料。</p>";
-      return;
-    }
+  let html = `
+    <div class="section-block">
+      <h3>📌 職位名稱：${role.role}</h3>
+      <p><strong>工作說明：</strong>${role.description}</p>
+    </div>
+    ${generateTable("🎓 學歷", role.hard.edu)}
+    ${generateTable("📂 經歷", role.hard.exp)}
+    ${generateTable("🛠️ 專業技能", role.hard.skill)}
+  `;
 
-    const role = roles[index];
-    document.getElementById("pdfTitle").innerText = "職位畫像｜" + role.role;
-    document.getElementById("timestamp").innerText = "匯出日期：" + new Date().toLocaleString("zh-TW");
+  role.soft.forEach(s => {
+    html += generateTable(`🌟 軟實力｜${s.title}`, s);
+  });
+  role.trait.forEach(s => {
+    html += generateTable(`💡 人格特質｜${s.title}`, s);
+  });
+  role.avoid.forEach(s => {
+    html += generateTable(`⚠️ 應避免特質｜${s.title}`, s);
+  });
 
-    let html = `
-      <div class="section-block">
-        <h3>📌 職位名稱：${role.role}</h3>
-        <p><strong>工作說明：</strong>${role.jobDescription}</p>
-      </div>
-      ${generateTable("學歷", role.hardCriteria.education)}
-      ${generateTable("經歷", role.hardCriteria.experience)}
-      ${generateTable("專業技能", role.hardCriteria.skills)}
-    `;
+  document.getElementById("pdfContent").innerHTML = html;
+}
 
-    role.softSkills.forEach(s => {
-      html += generateTable(`🌟 軟實力｜${s.name}`, s);
-    });
-    role.personalityTraits.forEach(s => {
-      html += generateTable(`💡 人格特質｜${s.name}`, s);
-    });
-    role.avoidTraits.forEach(s => {
-      html += generateTable(`⚠️ 應避免人格特質｜${s.name}`, s);
-    });
+function generateTable(title, item) {
+  const rows = item.scores.map(s => `<tr><td colspan="2">${s}</td></tr>`).join('');
+  return `
+    <div class="section-block">
+      <h3>${title}</h3>
+      <p><strong>描述：</strong>${item.desc}</p>
+      <table>${rows}</table>
+    </div>
+  `;
+}
 
-    document.getElementById("pdfContent").innerHTML = html;
-  }
-
-  function generateTable(title, item) {
-    const rows = item.scores.map(s => `<tr><td colspan="2">${s}</td></tr>`).join('');
-    return `
-      <div class="section-block">
-        <h3>${title}</h3>
-        <p><strong>描述：</strong>${item.description}</p>
-        <table>${rows}</table>
-      </div>
-    `;
-  }
-
-  function downloadPDF() {
-    const element = document.getElementById("pdfContent");
-    const title = document.getElementById("pdfTitle").innerText.replace("職位畫像｜", "");
-    const opt = {
-      margin: 0.5,
-      filename: `職位畫像_${title}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
-    html2pdf().set(opt).from(element).save();
-  }
+window.onload = renderPDFPage;
 </script>
 </body>
 </html>
