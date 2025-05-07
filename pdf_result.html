@@ -18,6 +18,9 @@
     <canvas id="radarChart"></canvas>
   </div>
   <div id="fitSummary" class="summary"></div>
+
+<button onclick="window.print()" style="margin-top: 2rem; padding: 0.5rem 1rem;">📥 匯出報告</button>
+
 <script>
   const index = new URLSearchParams(window.location.search).get("feedback");
   const feedbacks = JSON.parse(localStorage.getItem("feedbacks") || "[]");
@@ -63,18 +66,33 @@
           label: "平均分數",
           data: [hardAvg, softAvg, traitAvg],
           fill: true,
-          borderColor: "rgba(75,192,192,1)",
-          backgroundColor: "rgba(75,192,192,0.2)",
-          pointBackgroundColor: "rgba(75,192,192,1)"
+          borderColor: "rgba(54, 162, 235, 1)",
+          backgroundColor: "rgba(54, 162, 235, 0.2)",
+          pointBackgroundColor: "rgba(54, 162, 235, 1)",
+          pointBorderColor: "#fff",
+          pointHoverBackgroundColor: "#fff",
+          pointHoverBorderColor: "rgba(54, 162, 235, 1)",
+          tension: 0.3
         }]
       },
       options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+        },
         scales: {
           r: {
             suggestedMin: 0,
             suggestedMax: 5,
             ticks: {
-              stepSize: 1
+              stepSize: 1,
+              backdropColor: "transparent"
+            },
+            grid: {
+              color: "#ccc"
+            },
+            pointLabels: {
+              font: { size: 14 }
             }
           }
         }
