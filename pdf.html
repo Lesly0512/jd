@@ -2,76 +2,83 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>PDF 預覽與匯出</title>
+  <title>關鍵職位畫像</title>
   <style>
     body { font-family: "Noto Sans TC", sans-serif; padding: 2rem; line-height: 1.6; }
-    h1, h2, h3 { margin: 1rem 0 0.5rem; }
-    .section-block { margin-top: 2rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
-    td { border: 1px solid #ccc; padding: 0.5rem; }
-    .meta { margin-bottom: 1.5rem; color: #666; font-size: 0.9rem; }
-    .download-btn { margin-top: 1rem; padding: 0.4rem 0.8rem; }
+    h1, h2, h3 { margin-top: 1.5rem; }
+    .section { margin-top: 1.5rem; }
+    .score-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+    .score-table th, .score-table td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      vertical-align: top;
+    }
+    .meta { font-size: 0.9rem; color: #666; }
   </style>
 </head>
 <body>
-  <h1 id="pdfTitle">職位畫像 PDF 預覽</h1>
-  <div class="meta" id="timestamp"></div>
+  <h1>📌 關鍵崗位畫像</h1>
+  <p class="meta">匯出時間：<span id="timestamp"></span></p>
 
-  <div id="pdfContent"></div>
-
-  <button class="download-btn" onclick="window.print()">📄 下載 PDF</button>
-
+  <div id="roleContent"></div>
 <script>
-function renderPDFPage() {
-  const params = new URLSearchParams(window.location.search);
-  const index = parseInt(params.get("index"), 10);
-  const raw = localStorage.getItem("roles");
-  const roles = raw ? JSON.parse(raw) : [];
+  // 顯示匯出時間
+  document.getElementById("timestamp").textContent = new Date().toLocaleString("zh-TW");
 
-  if (isNaN(index) || !roles[index]) {
-    document.getElementById("pdfContent").innerHTML = "<p>查無職位資料。</p>";
-    return;
-  }
-
+  const index = new URLSearchParams(window.location.search).get("index");
+  const roles = JSON.parse(localStorage.getItem("roles") || "[]");
   const role = roles[index];
-  document.getElementById("pdfTitle").innerText = "職位畫像｜" + role.role;
-  document.getElementById("timestamp").innerText = "匯出日期：" + new Date().toLocaleString("zh-TW");
 
-  let html = `
-    <div class="section-block">
-      <h3>📌 職位名稱：${role.role}</h3>
-      <p><strong>工作說明：</strong>${role.description}</p>
-    </div>
-    ${generateTable("🎓 學歷", role.hard.edu)}
-    ${generateTable("📂 經歷", role.hard.exp)}
-    ${generateTable("🛠️ 專業技能", role.hard.skill)}
-  `;
+  if (!role) {
+    document.getElementById("roleContent").innerHTML = "<p>查無職位資料。</p>";
+  } else {
+    const content = document.getElementById("roleContent");
 
-  role.soft.forEach(s => {
-    html += generateTable(`🌟 軟實力｜${s.title}`, s);
-  });
-  role.trait.forEach(s => {
-    html += generateTable(`💡 人格特質｜${s.title}`, s);
-  });
-  role.avoid.forEach(s => {
-    html += generateTable(`⚠️ 應避免特質｜${s.title}`, s);
-  });
-
-  document.getElementById("pdfContent").innerHTML = html;
-}
-
-function generateTable(title, item) {
-  const rows = item.scores.map(s => `<tr><td colspan="2">${s}</td></tr>`).join('');
-  return `
-    <div class="section-block">
+    const sectionHTML = (title, items) => `
       <h3>${title}</h3>
-      <p><strong>描述：</strong>${item.desc}</p>
-      <table>${rows}</table>
-    </div>
-  `;
-}
+      ${items.map(item => `
+        <div class="section">
+          <strong>${item.title}</strong>
+          <p>${item.desc}</p>
+          <table class="score-table">
+            <thead><tr><th>分數</th><th>描述</th></tr></thead>
+            <tbody>
+              ${item.scores.map(s => {
+                const [score, desc] = s.split("分：");
+                return `<tr><td>${score}分</td><td>${desc}</td></tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      `).join("")}
+    `;
 
-window.onload = renderPDFPage;
+    content.innerHTML = `
+      <h2>📌 職位名稱：${role.role}</h2>
+      <p>${role.description}</p>
+
+      <h3>🎯 硬指標</h3>
+      ${["edu", "exp", "skill"].map(key => `
+        <div class="section">
+          <strong>${key === "edu" ? "學歷" : key === "exp" ? "經歷" : "專業技能"}</strong>
+          <p>${role.hard[key].desc}</p>
+          <table class="score-table">
+            <thead><tr><th>分數</th><th>描述</th></tr></thead>
+            <tbody>
+              ${role.hard[key].scores.map(s => {
+                const [score, desc] = s.split("分：");
+                return `<tr><td>${score}分</td><td>${desc}</td></tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      `).join("")}
+
+      ${sectionHTML("🌟 軟實力", role.soft)}
+      ${sectionHTML("💡 人格特質", role.trait)}
+      ${sectionHTML("⚠️ 應避免特質", role.avoid)}
+    `;
+  }
 </script>
 </body>
 </html>
