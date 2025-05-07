@@ -102,6 +102,7 @@
       </div>
       <div id="feedbackTable"></div>
     </div>
+
 <script>
   const correctPassword = "demo_admin";
   let roles = [];
@@ -167,6 +168,7 @@
     };
     reader.readAsText(file);
   }
+
   function exportFeedback() {
     const data = localStorage.getItem("feedbacks");
     if (!data) return alert("尚無任何回饋資料！");
@@ -207,7 +209,7 @@
         <thead>
           <tr>
             <th>#</th><th>姓名</th><th>職位</th><th>提交時間</th>
-            <th>分數</th><th>總分</th><th>等級</th><th>圖表</th>
+            <th>分數</th><th>總分</th><th>等級</th><th>操作</th>
           </tr>
         </thead>
         <tbody>
@@ -220,13 +222,25 @@
               <td>${fb.scores.join(", ")}</td>
               <td>${parseFloat(fb.scoreTotal || 0).toFixed(2)}</td>
               <td>${fb.scoreLevel || "-"}</td>
-              <td><a href="pdf_result.html?feedback=${i}" target="_blank">📄</a></td>
+              <td>
+                <a href="pdf_result.html?feedback=${i}" target="_blank">📄</a>
+                <button onclick="deleteFeedback(${i})" style="color:red;">🗑️</button>
+              </td>
             </tr>
           `).join("")}
         </tbody>
       </table>
     `;
     document.getElementById("feedbackTable").innerHTML = html;
+  }
+
+  function deleteFeedback(index) {
+    if (confirm("確定要刪除此筆評分紀錄？")) {
+      const feedbacks = JSON.parse(localStorage.getItem("feedbacks") || "[]");
+      feedbacks.splice(index, 1);
+      localStorage.setItem("feedbacks", JSON.stringify(feedbacks));
+      showFeedback();
+    }
   }
 </script>
 </body>
