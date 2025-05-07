@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>後台登入｜關鍵崗位畫像管理</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; line-height: 1.6; }
+    h2 { margin-top: 2rem; }
+    label { display: block; margin-top: 1rem; font-weight: bold; }
+    textarea, input[type="text"] { width: 100%; padding: 0.5rem; margin-top: 0.2rem; }
+    button { margin-top: 0.5rem; padding: 0.4rem 0.8rem; }
+    fieldset { border: 1px solid #ccc; padding: 1rem; margin-top: 1rem; position: relative; }
+    legend { font-weight: bold; }
+    .block { margin-bottom: 1rem; }
+    .small-note { font-size: 0.9em; color: #666; margin-top: 0.2rem; }
+    .delete-btn { position: absolute; top: 5px; right: 10px; color: red; cursor: pointer; background: none; border: none; }
+    .section-block { border: 1px solid #ccc; padding: 1rem; margin-top: 2rem; background: #fafafa; }
+    .section-block h3 { margin-top: 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 0.5rem; text-align: left; }
+    .role-list { border-top: 1px dashed #ccc; margin-top: 2rem; padding-top: 1rem; }
+    .role-item { margin: 0.5rem 0; }
+    .role-item button { margin-left: 0.5rem; }
+    .json-buttons { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>🔐 後台登入</h1>
+  <input type="password" id="passwordInput" placeholder="請輸入密碼" />
+  <button onclick="checkPassword()">登入</button>
+
+  <div id="adminContent" style="display:none;">
+    <h2>🎯 關鍵職位設定表單</h2>
+    <form id="roleForm">
+      <label>職位名稱</label>
+      <input type="text" id="roleName" required />
+      <label>工作說明書</label>
+      <textarea id="jobDescription" rows="3"></textarea>
+
+      <h3>📌 硬指標</h3>
+      <fieldset>
+        <legend>學歷</legend>
+        <label>描述</label>
+        <textarea id="eduDesc"></textarea>
+        <label>1～5 分評分描述</label>
+        <textarea id="eduScores" rows="5"></textarea>
+        <div class="small-note">請輸入每行一筆描述，系統會自動加上「1分～5分」標示</div>
+      </fieldset>
+
+      <fieldset>
+        <legend>經歷</legend>
+        <label>描述</label>
+        <textarea id="expDesc"></textarea>
+        <label>1～5 分評分描述</label>
+        <textarea id="expScores" rows="5"></textarea>
+        <div class="small-note">請輸入每行一筆描述，系統會自動加上「1分～5分」標示</div>
+      </fieldset>
+
+      <fieldset>
+        <legend>專業技能</legend>
+        <label>描述</label>
+        <textarea id="skillDesc"></textarea>
+        <label>1～5 分評分描述</label>
+        <textarea id="skillScores" rows="5"></textarea>
+        <div class="small-note">請輸入每行一筆描述，系統會自動加上「1分～5分」標示</div>
+      </fieldset>
+
+      <h3>🌟 軟實力（最多五項）</h3>
+      <div id="softContainer"></div>
+      <button type="button" onclick="addSection('soft')">＋新增軟實力項目</button>
+
+      <h3>💡 人格特質（最多五項）</h3>
+      <div id="traitContainer"></div>
+      <button type="button" onclick="addSection('trait')">＋新增人格特質項目</button>
+
+      <h3>⚠️ 應避免的人格特質（最多三項）</h3>
+      <div id="avoidContainer"></div>
+      <button type="button" onclick="addSection('avoid')">＋新增應避免項目</button>
+
+      <br/><br/>
+      <button type="submit">📥 新增職位畫像</button>
+      <button type="button" onclick="clearForm()" style="margin-left:1rem;color:red;">🗑️ 清除目前表單</button>
+    </form>
+
+    <div class="role-list">
+      <div class="json-buttons">
+        <h3 style="margin: 0;">🗂️ 已新增職位清單</h3>
+        <input type="file" id="jsonImport" accept=".json" style="display:none" onchange="handleImport(this.files[0])">
+        <button onclick="document.getElementById('jsonImport').click()">📥 匯入 JSON</button>
+        <button onclick="exportJSON()">📤 匯出 JSON</button>
+      </div>
+      <ul id="roleList"></ul>
+    </div>
+
+    <div id="displayArea" style="margin-top:2rem;"></div>
+
+<script>
+  const correctPassword = "demo_admin";
+  let roles = [];
+
+  function checkPassword() {
+    if (document.getElementById("passwordInput").value === correctPassword) {
+      document.getElementById("adminContent").style.display = "block";
+      const stored = localStorage.getItem("roles");
+      roles = stored ? JSON.parse(stored) : [];
+      updateRoleList();
+    } else {
+      alert("密碼錯誤！");
+    }
+  }
+
+  const limits = { soft: 5, trait: 5, avoid: 3 };
+  const counters = { soft: 0, trait: 0, avoid: 0 };
+
+  function addSection(type) {
+    if (counters[type] >= limits[type]) return alert(`最多只能新增 ${limits[type]} 項`);
+    const container = document.getElementById(type + "Container");
+    const div = document.createElement("div");
+    div.classList.add("block");
+    const index = counters[type] + 1;
+    div.innerHTML = `
+      <fieldset>
+        <legend>項目 ${index}</legend>
+        <button class="delete-btn" onclick="this.parentElement.parentElement.remove();event.preventDefault();counters['${type}']--;">✖</button>
+        <label>名稱</label>
+        <input type="text" name="${type}Name" />
+        <label>描述</label>
+        <textarea name="${type}Desc"></textarea>
+        <label>1～5 分評分描述</label>
+        <textarea name="${type}Scores" rows="5"></textarea>
+        <div class="small-note">請輸入每行一筆描述，系統會自動加上「1分～5分」標示</div>
+      </fieldset>
+    `;
+    container.appendChild(div);
+    counters[type]++;
+  }
+
+  function clearForm() {
+    document.getElementById("roleForm").reset();
+    document.getElementById("softContainer").innerHTML = '';
+    document.getElementById("traitContainer").innerHTML = '';
+    document.getElementById("avoidContainer").innerHTML = '';
+    counters.soft = counters.trait = counters.avoid = 0;
+  }
+
+  function applyScoreLabels(lines) {
+    return lines.map((line, i) => `${i + 1}分：${line.trim()}`);
+  }
+
+  function collectBlocks(type) {
+    const names = document.getElementsByName(`${type}Name`);
+    const descs = document.getElementsByName(`${type}Desc`);
+    const scores = document.getElementsByName(`${type}Scores`);
+    const arr = [];
+    for (let i = 0; i < names.length; i++) {
+      arr.push({
+        name: names[i].value.trim(),
+        description: descs[i].value.trim(),
+        scores: applyScoreLabels(scores[i].value.trim().split("\n"))
+      });
+    }
+    return arr;
+  }
+
+  function generateTable(title, description, scores) {
+    let rows = scores.map(score => `<tr><td colspan="2">${score}</td></tr>`).join('');
+    return `
+      <div class="section-block">
+        <h3>${title}</h3>
+        <p><strong>描述：</strong>${description}</p>
+        <table>${rows}</table>
+      </div>
+    `;
+  }
+
+  function displayRole(index) {
+    const role = roles[index];
+    let html = `
+      <div class="section-block">
+        <h2>📌 職位名稱：${role.role}</h2>
+        <p><strong>工作說明：</strong>${role.jobDescription}</p>
+      </div>
+      ${generateTable("學歷", role.hardCriteria.education.description, role.hardCriteria.education.scores)}
+      ${generateTable("經歷", role.hardCriteria.experience.description, role.hardCriteria.experience.scores)}
+      ${generateTable("專業技能", role.hardCriteria.skills.description, role.hardCriteria.skills.scores)}
+    `;
+
+    role.softSkills.forEach(s => {
+      html += generateTable(`🌟 軟實力｜${s.name}`, s.description, s.scores);
+    });
+    role.personalityTraits.forEach(s => {
+      html += generateTable(`💡 人格特質｜${s.name}`, s.description, s.scores);
+    });
+    role.avoidTraits.forEach(s => {
+      html += generateTable(`⚠️ 應避免人格特質｜${s.name}`, s.description, s.scores);
+    });
+
+    document.getElementById("displayArea").innerHTML = html;
+  }
+
+  function updateRoleList() {
+    const list = document.getElementById("roleList");
+    list.innerHTML = "";
+    roles.forEach((r, i) => {
+      const li = document.createElement("li");
+      li.classList.add("role-item");
+      li.innerHTML = `
+        🔘 <button onclick="displayRole(${i})">${r.role}</button>
+        <button onclick="window.open('pdf.html?index=${i}', '_blank')">📄 預覽與匯出</button>
+        <button onclick="deleteRole(${i})" style="color:red;">🗑️ 刪除</button>
+      `;
+      list.appendChild(li);
+    });
+    localStorage.setItem("roles", JSON.stringify(roles));
+  }
+
+  function deleteRole(index) {
+    if (confirm("確定要刪除此職位？")) {
+      roles.splice(index, 1);
+      document.getElementById("displayArea").innerHTML = "";
+      updateRoleList();
+    }
+  }
+
+  function exportJSON() {
+    const blob = new Blob([JSON.stringify(roles, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "roles_backup.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImport(file) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!Array.isArray(data)) throw new Error("格式錯誤！");
+        roles = data;
+        updateRoleList();
+        document.getElementById("displayArea").innerHTML = "";
+        alert("✅ 匯入成功！");
+      } catch (err) {
+        alert("❌ 匯入失敗：" + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  document.getElementById("roleForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const data = {
+      role: document.getElementById("roleName").value.trim(),
+      jobDescription: document.getElementById("jobDescription").value.trim(),
+      hardCriteria: {
+        education: {
+          description: document.getElementById("eduDesc").value.trim(),
+          scores: applyScoreLabels(document.getElementById("eduScores").value.trim().split("\n"))
+        },
+        experience: {
+          description: document.getElementById("expDesc").value.trim(),
+          scores: applyScoreLabels(document.getElementById("expScores").value.trim().split("\n"))
+        },
+        skills: {
+          description: document.getElementById("skillDesc").value.trim(),
+          scores: applyScoreLabels(document.getElementById("skillScores").value.trim().split("\n"))
+        }
+      },
+      softSkills: collectBlocks("soft"),
+      personalityTraits: collectBlocks("trait"),
+      avoidTraits: collectBlocks("avoid")
+    };
+
+    roles.push(data);
+    updateRoleList();
+    displayRole(roles.length - 1);
+    clearForm();
+    alert("✅ 職位畫像已新增！");
+  });
+</script>
+</body>
+</html>
