@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>評分結果匯出</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; background: #f9f9f9; }
+    h1, h2 { margin-bottom: 0.5rem; }
+    .box { background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+    button { margin-top: 1rem; padding: 0.5rem 1rem; }
+    .summary-box { margin-top: 2rem; background: #eef8ff; padding: 1rem; border-left: 4px solid #3399cc; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="box" id="pdfTarget">
+    <h1>📈 適配雷達圖</h1>
+    <p id="meta"></p>
+    <canvas id="chartCanvas" width="500" height="400"></canvas>
+    <div class="summary-box" id="summaryBox"></div>
+  </div>
+  <button onclick="downloadPDF()">📄 下載 PDF</button>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const index = parseInt(params.get("feedback"), 10);
+    const feedbacks = JSON.parse(localStorage.getItem("feedbacks") || "[]");
+    const fb = feedbacks[index];
+
+    if (!fb) {
+      document.body.innerHTML = "<p>找不到評分資料，請重新返回。</p>";
+      throw new Error("Invalid feedback index");
+    }
+
+    document.getElementById("meta").innerText =
+      `被評人姓名：${fb.name}｜職位：${fb.role}｜提交時間：${new Date(fb.submittedAt).toLocaleString("zh-TW")}`;
+
+    const ctx = document.getElementById("chartCanvas").getContext("2d");
+    new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: fb.labels,
+        datasets: [
+          {
+            label: fb.name,
+            data: fb.scores,
+            borderWidth: 2,
+            fill: true
+          },
+          {
+            label: '平均標準（模擬）',
+            data: fb.labels.map(() => 3),
+            borderWidth: 2,
+            borderDash: [5, 5],
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: false,
+        animation: false,
+        scales: {
+          r: {
+            min: 0,
+            max: 5,
+            ticks: { stepSize: 1 }
+          }
+        }
+      }
+    });
+
+    const total = parseFloat(fb.scoreTotal || "0").toFixed(2);
+    const level = fb.scoreLevel || "";
+    let summary = "";
+    if (total >= 4.5) {
+      summary = "完全符合硬指標（學歷、經歷、技能）要求，並在關鍵軟實力上表現卓越，具備卓越的決策力、創新能力、團隊領導力等，能立即勝任該職位並為企業帶來價值。";
+    } else if (total >= 3.5) {
+      summary = "大致符合硬指標要求，在關鍵軟實力方面展現強大能力，但可能在某些細節上稍有不足，仍能較快適應崗位。";
+    } else if (total >= 2.5) {
+      summary = "部分符合硬指標，但可能缺少某些關鍵經驗、技能，或在軟實力方面需要進一步培養，能夠勝任，但需要一定時間適應與學習。";
+    } else if (total >= 1.5) {
+      summary = "學歷、經歷、技能與職位需求有顯著落差，或在軟實力表現不足，需要大量培訓與指導才能勉強勝任。";
+    } else {
+      summary = "學歷、經歷與技能均嚴重不符，軟實力無法展現適應性，無法有效勝任該職位，且培養成本過高，幾乎無適任可能。";
+    }
+
+    document.getElementById("summaryBox").innerHTML = `
+      <h3>🔍 適配度結果：${level}（總分 ${total}）</h3>
+      <p>${summary}</p>
+    `;
+
+    function downloadPDF() {
+      const element = document.getElementById("pdfTarget");
+      html2pdf().set({
+        margin: 0.5,
+        filename: `評分結果_${fb.name}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      }).from(element).save();
+    }
+  </script>
+</body>
+</html>
