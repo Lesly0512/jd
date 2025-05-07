@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>後台登入 | 關鍵崗位畫像管理</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    #adminContent { display: none; margin-top: 2rem; }
+    label { display: block; margin-top: 1rem; }
+    textarea, input[type="text"] { width: 100%; padding: 0.5rem; }
+    button { margin-top: 1rem; padding: 0.5rem 1rem; }
+  </style>
+</head>
+<body>
+  <h2>🔒 後台登入</h2>
+  <input type="password" id="passwordInput" placeholder="請輸入密碼" />
+  <button onclick="checkPassword()">登入</button>
+
+  <div id="adminContent">
+    <h3>🛠️ 關鍵崗位畫像管理</h3>
+    <form id="roleForm">
+      <label>職位名稱</label>
+      <input type="text" id="roleName" required />
+
+      <label>工作說明書</label>
+      <textarea id="jobDescription" rows="4"></textarea>
+
+      <label>硬指標（如學歷、年資等）</label>
+      <textarea id="hardCriteria" rows="2"></textarea>
+
+      <label>軟實力（如溝通力、創新力）</label>
+      <textarea id="softSkills" rows="2"></textarea>
+
+      <label>人格特質（如誠信、自律）</label>
+      <textarea id="personalityTraits" rows="2"></textarea>
+
+      <button type="submit">📥 儲存職位資料</button>
+    </form>
+
+    <pre id="outputJson" style="margin-top:2rem; background:#f0f0f0; padding:1rem;"></pre>
+  </div>
+
+  <script>
+    const correctPassword = "demo_admin";
+
+    function checkPassword() {
+      const input = document.getElementById("passwordInput").value;
+      if (input === correctPassword) {
+        document.getElementById("adminContent").style.display = "block";
+      } else {
+        alert("密碼錯誤，請再試一次");
+      }
+    }
+
+    document.getElementById("roleForm").addEventListener("submit", function(event) {
+      event.preventDefault();
+      const roleData = {
+        role: document.getElementById("roleName").value.trim(),
+        jobDescription: document.getElementById("jobDescription").value.trim(),
+        hardCriteria: document.getElementById("hardCriteria").value.trim().split("\n"),
+        softSkills: document.getElementById("softSkills").value.trim().split("\n"),
+        personalityTraits: document.getElementById("personalityTraits").value.trim().split("\n")
+      };
+
+      document.getElementById("outputJson").textContent = JSON.stringify(roleData, null, 2);
+    });
+  </script>
+</body>
+</html>
