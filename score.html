@@ -22,6 +22,7 @@
   <input type="text" id="personName" required />
 
   <form id="scoreForm">
+<div id="ratingArea"></div>
     <div id="ratingSections"></div>
     <button class="submit-btn" type="submit">提交評分</button>
   </form>
@@ -132,6 +133,36 @@
     alert("✅ 評分完成，資料已儲存！");
     location.href = "pdf_result.html?feedback=" + (feedbacks.length - 1);
   });
+
+function renderIndicators(role) {
+  const container = document.getElementById("ratingArea");
+  container.innerHTML = "";
+
+  const sections = [
+    { title: "學歷", item: role.hard.edu },
+    { title: "經歷", item: role.hard.exp },
+    { title: "專業技能", item: role.hard.skill },
+    ...role.soft.map(s => ({ title: s.title, item: s })),
+    ...role.trait.map(t => ({ title: t.title, item: t }))
+  ];
+
+  sections.forEach((sec, i) => {
+    const block = document.createElement("div");
+    block.innerHTML = `
+      <h4>${sec.title}</h4>
+      <p>${sec.item.desc}</p>
+      ${sec.item.scores.map((desc, idx) => `
+        <label>
+          <input type="radio" name="score${i}" value="${5 - idx}" required />
+          ${desc}
+        </label><br/>
+      `).join("")}
+      <hr/>
+    `;
+    container.appendChild(block);
+  });
+}
+
 </script>
 </body>
 </html>
