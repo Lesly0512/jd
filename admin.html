@@ -41,29 +41,30 @@
       <fieldset>
         <legend>學歷</legend>
         <label>描述</label>
-        <textarea id="eduDesc"></textarea>
+        <textarea id="eduDesc" required></textarea>
         <label>1～5 分評分描述</label>
-        <textarea id="eduScores" rows="5"></textarea>
-        <div class="small-note">請輸入每行一筆描述，系統會自動加上「1分～5分」標示</div>
+        <textarea id="eduScores" rows="5" required></textarea>
+        <div class="small-note">請輸入 <strong>五行</strong>，一行代表一個分數等級（5～1 分）</div>
       </fieldset>
 
       <fieldset>
         <legend>經歷</legend>
         <label>描述</label>
-        <textarea id="expDesc"></textarea>
+        <textarea id="expDesc" required></textarea>
         <label>1～5 分評分描述</label>
-        <textarea id="expScores" rows="5"></textarea>
-        <div class="small-note">請輸入每行一筆描述，系統會自動加上「1分～5分」標示</div>
+        <textarea id="expScores" rows="5" required></textarea>
+        <div class="small-note">請輸入 <strong>五行</strong>，一行代表一個分數等級（5～1 分）</div>
       </fieldset>
 
       <fieldset>
         <legend>專業技能</legend>
         <label>描述</label>
-        <textarea id="skillDesc"></textarea>
+        <textarea id="skillDesc" required></textarea>
         <label>1～5 分評分描述</label>
-        <textarea id="skillScores" rows="5"></textarea>
-        <div class="small-note">請輸入每行一筆描述，系統會自動加上「1分～5分」標示</div>
+        <textarea id="skillScores" rows="5" required></textarea>
+        <div class="small-note">請輸入 <strong>五行</strong>，一行代表一個分數等級（5～1 分）</div>
       </fieldset>
+
       <h3>🌟 軟實力（最多五項）</h3>
       <div id="softContainer"></div>
       <button type="button" onclick="addSection('soft')">＋新增軟實力項目</button>
@@ -102,7 +103,6 @@
       </div>
       <div id="feedbackTable"></div>
     </div>
-
 <script>
   const correctPassword = "demo_admin";
   let roles = [];
@@ -241,6 +241,7 @@
       showFeedback();
     }
   }
+
   function addSection(type) {
     const containerId = {
       soft: "softContainer",
@@ -262,7 +263,7 @@
       <textarea rows="2"></textarea>
       <label>1～5 分評分描述</label>
       <textarea rows="5"></textarea>
-      <div class="small-note">請輸入每行一筆描述，系統會自動加上「1分～5分」標示</div>
+      <div class="small-note">請輸入五行，系統會自動加上「5～1分」標示</div>
       <button type="button" class="delete-btn" onclick="this.parentNode.remove()">✖</button>
     `;
     container.appendChild(wrapper);
@@ -300,17 +301,23 @@
     document.getElementById("displayArea").innerHTML = html;
   }
 
-  // ✅ 修正提交表單時會 reload 的 bug
   document.getElementById("roleForm").addEventListener("submit", function (e) {
     e.preventDefault();
 
     const role = document.getElementById("roleName").value.trim();
     const description = document.getElementById("jobDescription").value.trim();
 
-    const getBlock = (idDesc, idScores) => ({
-      desc: document.getElementById(idDesc).value.trim(),
-      scores: document.getElementById(idScores).value.trim().split("\n").map((s, i) => `${5 - i} 分：${s.trim()}`)
-    });
+    const getBlock = (idDesc, idScores) => {
+      const scoreLines = document.getElementById(idScores).value.trim().split("\n");
+      if (scoreLines.length !== 5) {
+        alert("每一項評分描述請填寫五行！");
+        throw new Error("格式錯誤");
+      }
+      return {
+        desc: document.getElementById(idDesc).value.trim(),
+        scores: scoreLines.map((s, i) => `${5 - i} 分：${s.trim()}`)
+      };
+    };
 
     const hard = {
       edu: getBlock("eduDesc", "eduScores"),
@@ -319,11 +326,18 @@
     };
 
     const getCustomBlock = (containerId) => {
-      return Array.from(document.getElementById(containerId).children).map(f => ({
-        title: f.querySelector("input").value.trim(),
-        desc: f.querySelector("textarea").value.trim(),
-        scores: f.querySelectorAll("textarea")[1].value.trim().split("\n").map((s, i) => `${5 - i} 分：${s.trim()}`)
-      }));
+      return Array.from(document.getElementById(containerId).children).map(f => {
+        const scoreLines = f.querySelectorAll("textarea")[1].value.trim().split("\n");
+        if (scoreLines.length !== 5) {
+          alert("每一項評分描述請填寫五行！");
+          throw new Error("格式錯誤");
+        }
+        return {
+          title: f.querySelector("input").value.trim(),
+          desc: f.querySelector("textarea").value.trim(),
+          scores: scoreLines.map((s, i) => `${5 - i} 分：${s.trim()}`)
+        };
+      });
     };
 
     const soft = getCustomBlock("softContainer");
