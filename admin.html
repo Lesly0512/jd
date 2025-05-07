@@ -64,6 +64,7 @@
         <textarea id="skillScores" rows="5"></textarea>
         <div class="small-note">請輸入每行一筆描述，系統會自動加上「1分～5分」標示</div>
       </fieldset>
+
       <h3>🌟 軟實力（最多五項）</h3>
       <div id="softContainer"></div>
       <button type="button" onclick="addSection('soft')">＋新增軟實力項目</button>
@@ -168,7 +169,6 @@
     };
     reader.readAsText(file);
   }
-
   function exportFeedback() {
     const data = localStorage.getItem("feedbacks");
     if (!data) return alert("尚無任何回饋資料！");
@@ -241,6 +241,64 @@
       localStorage.setItem("feedbacks", JSON.stringify(feedbacks));
       showFeedback();
     }
+  }
+  function addSection(type) {
+    const containerId = {
+      soft: "softContainer",
+      trait: "traitContainer",
+      avoid: "avoidContainer"
+    }[type];
+
+    const max = type === "avoid" ? 3 : 5;
+    const container = document.getElementById(containerId);
+    if (container.children.length >= max) return alert(`最多只能新增 ${max} 項！`);
+
+    const index = container.children.length + 1;
+    const wrapper = document.createElement("fieldset");
+    wrapper.innerHTML = `
+      <legend>${type === "soft" ? "軟實力" : type === "trait" ? "人格特質" : "應避免特質"} #${index}</legend>
+      <label>項目名稱</label>
+      <input type="text" />
+      <label>描述</label>
+      <textarea rows="2"></textarea>
+      <label>1～5 分評分描述</label>
+      <textarea rows="5"></textarea>
+      <div class="small-note">請輸入每行一筆描述，系統會自動加上「1分～5分」標示</div>
+      <button type="button" class="delete-btn" onclick="this.parentNode.remove()">✖</button>
+    `;
+    container.appendChild(wrapper);
+  }
+
+  function clearForm() {
+    document.getElementById("roleForm").reset();
+    document.getElementById("softContainer").innerHTML = "";
+    document.getElementById("traitContainer").innerHTML = "";
+    document.getElementById("avoidContainer").innerHTML = "";
+  }
+
+  function displayRole(index) {
+    const r = roles[index];
+    let html = `<h3>📌 職位：${r.role}</h3><p>${r.description}</p>`;
+
+    html += `<h4>🎯 硬指標</h4><ul>`;
+    ["edu", "exp", "skill"].forEach(key => {
+      html += `<li><b>${key.toUpperCase()}：</b>${r.hard[key].desc}<br/>${r.hard[key].scores.join("<br/>")}</li>`;
+    });
+    html += `</ul>`;
+
+    html += `<h4>🌟 軟實力</h4><ul>` + r.soft.map(s =>
+      `<li><b>${s.title}</b>：${s.desc}<br/>${s.scores.join("<br/>")}</li>`
+    ).join("") + `</ul>`;
+
+    html += `<h4>💡 人格特質</h4><ul>` + r.trait.map(s =>
+      `<li><b>${s.title}</b>：${s.desc}<br/>${s.scores.join("<br/>")}</li>`
+    ).join("") + `</ul>`;
+
+    html += `<h4>⚠️ 應避免特質</h4><ul>` + r.avoid.map(s =>
+      `<li><b>${s.title}</b>：${s.desc}<br/>${s.scores.join("<br/>")}</li>`
+    ).join("") + `</ul>`;
+
+    document.getElementById("displayArea").innerHTML = html;
   }
 </script>
 </body>
