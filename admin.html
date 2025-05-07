@@ -64,7 +64,6 @@
         <textarea id="skillScores" rows="5"></textarea>
         <div class="small-note">請輸入每行一筆描述，系統會自動加上「1分～5分」標示</div>
       </fieldset>
-
       <h3>🌟 軟實力（最多五項）</h3>
       <div id="softContainer"></div>
       <button type="button" onclick="addSection('soft')">＋新增軟實力項目</button>
@@ -300,6 +299,43 @@
 
     document.getElementById("displayArea").innerHTML = html;
   }
+
+  // ✅ 修正提交表單時會 reload 的 bug
+  document.getElementById("roleForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const role = document.getElementById("roleName").value.trim();
+    const description = document.getElementById("jobDescription").value.trim();
+
+    const getBlock = (idDesc, idScores) => ({
+      desc: document.getElementById(idDesc).value.trim(),
+      scores: document.getElementById(idScores).value.trim().split("\n").map((s, i) => `${5 - i} 分：${s.trim()}`)
+    });
+
+    const hard = {
+      edu: getBlock("eduDesc", "eduScores"),
+      exp: getBlock("expDesc", "expScores"),
+      skill: getBlock("skillDesc", "skillScores")
+    };
+
+    const getCustomBlock = (containerId) => {
+      return Array.from(document.getElementById(containerId).children).map(f => ({
+        title: f.querySelector("input").value.trim(),
+        desc: f.querySelector("textarea").value.trim(),
+        scores: f.querySelectorAll("textarea")[1].value.trim().split("\n").map((s, i) => `${5 - i} 分：${s.trim()}`)
+      }));
+    };
+
+    const soft = getCustomBlock("softContainer");
+    const trait = getCustomBlock("traitContainer");
+    const avoid = getCustomBlock("avoidContainer");
+
+    roles.push({ role, description, hard, soft, trait, avoid });
+    localStorage.setItem("roles", JSON.stringify(roles));
+    updateRoleList();
+    alert("✅ 職位畫像已新增！");
+    clearForm();
+  });
 </script>
 </body>
 </html>
